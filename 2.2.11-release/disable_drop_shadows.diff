@@ -1,0 +1,15 @@
+diff --git a/src/r_things.c b/src/r_things.c
+index 2916482fb..d7c656d41 100644
+
+Attempts to disable drop shadows (Only works in Software mode)
+
+--- a/src/r_things.c
++++ b/src/r_things.c
+@@ -1275,6 +1275,7 @@ static void R_SkewShadowSprite(
+ 
+ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, fixed_t tx, fixed_t tz)
+ {
++	return;
+ 	vissprite_t *shadow;
+ 	patch_t *patch;
+ 	fixed_t xscale, yscale, shadowxscale, shadowyscale, shadowskew, x1, x2;

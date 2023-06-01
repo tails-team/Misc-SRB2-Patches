@@ -1,0 +1,22 @@
+diff --git a/src/f_finale.h b/src/f_finale.h
+index 6ea1b5537..c6d576d49 100644
+
+Changes the fading routine to more uniformly fade out the R, G, B components
+together (like pre-2.2) instead of weighing the R and G components more
+(resulting in a blue fade a la classic Sonic games)
+
+--- a/src/f_finale.h
++++ b/src/f_finale.h
+@@ -169,9 +169,9 @@ void F_DecideWipeStyle(void);
+ #define FADECOLORMAPDIV 8
+ #define FADECOLORMAPROWS (256/FADECOLORMAPDIV)
+ 
+-#define FADEREDFACTOR   15
+-#define FADEGREENFACTOR 15
+-#define FADEBLUEFACTOR  10
++#define FADEREDFACTOR   8
++#define FADEGREENFACTOR 8
++#define FADEBLUEFACTOR  8
+ 
+ extern INT32 lastwipetic;
+ 

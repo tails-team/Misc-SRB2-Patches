@@ -1,0 +1,24 @@
+diff --git a/src/g_game.c b/src/g_game.c
+index 0d5181b07..a4d13f971 100644
+
+Hack to eliminate the level fading delay.
+
+--- a/src/g_game.c
++++ b/src/g_game.c
+@@ -1901,8 +1901,6 @@ void G_PreLevelTitleCard(void)
+ 	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
+ 	tic_t nowtime = starttime;
+ 	tic_t lasttime = starttime;
+-	while (nowtime < endtime)
+-	{
+ 		// draw loop
+ 		while (!((nowtime = I_GetTime()) - lasttime))
+ 		{
+@@ -1919,7 +1917,6 @@ void G_PreLevelTitleCard(void)
+ 			M_SaveFrame();
+ 		if (takescreenshot) // Only take screenshots after drawing.
+ 			M_DoScreenShot();
+-	}
+ 	if (!cv_showhud.value)
+ 		wipestyleflags = WSF_CROSSFADE;
+ #endif
