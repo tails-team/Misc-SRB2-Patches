@@ -1,8 +1,10 @@
 diff --git a/src/st_stuff.c b/src/st_stuff.c
-index 206c93273..35756899b 100644
+index 206c93273..b1849ae7c 100644
 
 Attempts to port the old title card sequence from pre-2.2. Does not affect
 graphics - you'll need to supply that yourself.
+
+Includes the funny interpolation stuff now
 
 --- a/src/st_stuff.c
 +++ b/src/st_stuff.c
@@ -75,7 +77,12 @@ graphics - you'll need to supply that yourself.
 -				lt_scroll -= (lt_scroll>>2);
 -			else
 -				lt_scroll = 0;
--		}
++		if (lt_preticker < 28) {
++		    lt_preticker++;
++		    lt_ticker = 1; // hold ticker until we're ready
++		} else {
++		    lt_ticker++;
+ 		}
 -		// scroll away from screen (level title)
 -		else
 -		{
@@ -90,12 +97,7 @@ graphics - you'll need to supply that yourself.
 -				lt_zigzag -= (lt_zigzag>>2);
 -			else
 -				lt_zigzag = 0;
-+		if (lt_preticker < 28) {
-+		    lt_preticker++;
-+		    lt_ticker = 1; // hold ticker until we're ready
-+		} else {
-+		    lt_ticker++;
- 		}
+-		}
 -		// scroll away from screen (zigzag)
 -		else
 -			lt_zigzag += lt_mom;
@@ -118,11 +120,11 @@ graphics - you'll need to supply that yourself.
 -		colornum = cv_playercolor.value;
 -
 -	colormap = R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE);
-+	INT32 zoney, lvlttly;
++    INT32 zoney, lvlttly;
  
  	if (!G_IsTitleCardAvailable())
  		return;
-@@ -1360,16 +1313,29 @@ void ST_drawTitleCard(void)
+@@ -1360,19 +1313,61 @@ void ST_drawTitleCard(void)
  	if (!LUA_HudEnabled(hud_stagetitle))
  		goto luahook;
  
@@ -139,7 +141,7 @@ graphics - you'll need to supply that yourself.
 -	zztext = lt_patches[2];
 +	switch (lt_ticker-1)
 +	{ // yeah, this is how 2.1 does it
-+	case 0:   zoney = 500; lvlttly = 500; break;
++    case 0:   zoney = 500; lvlttly = 500; break;
 +	case 1:   zoney = 200; lvlttly =   0; break;
 +	case 2:   zoney = 188; lvlttly =  12; break;
 +	case 3:   zoney = 176; lvlttly =  24; break;
@@ -157,7 +159,39 @@ graphics - you'll need to supply that yourself.
  
  	lvlttlxpos = ((BASEVIDWIDTH/2) - (V_LevelNameWidth(lvlttl)/2));
  
-@@ -1383,31 +1349,15 @@ void ST_drawTitleCard(void)
++
++    // let's add interpolation...
++    INT32 deltaly, deltazy;
++    fixed_t zoney_frac, lvlttly_frac;
++
++    deltaly = 12; // initialize lvltty's "delta to next frame"
++    deltazy = 12; // initialize zoney's "delta to next frame"
++
++    // fractional offsets
++    zoney_frac = 0;
++    lvlttly_frac = 0;
++
++    switch (lt_ticker-1)
++    { // setup interp values
++    case 0:   deltaly = 12; deltazy=12; break;
++    case 7:   deltaly = 8; deltazy=24; break;
++    case 8:   deltaly = 24; deltazy=24; break;
++    case 105: deltaly = 32-4;  deltazy=48-4;  break;
++    case 106: deltaly = 24+4;  deltazy=24+4;  break;
++    }
++
++    // calculate how much to offset to the real values
++    if (
++        ((lt_ticker-1) <= 7) || ((lt_ticker-1) >= 105)
++    ) {
++        lvlttly_frac = FixedMul(rendertimefrac, deltaly * FRACUNIT)/FRACUNIT;
++        zoney_frac = FixedMul(rendertimefrac, -deltazy * FRACUNIT)/FRACUNIT;
++    }
++
+ 	if (actnum > 0)
+ 		lvlttlxpos -= V_LevelActNumWidth(actnum);
+ 
+@@ -1383,31 +1378,17 @@ void ST_drawTitleCard(void)
  	if (lvlttlxpos < 0)
  		lvlttlxpos = 0;
  
@@ -169,7 +203,8 @@ graphics - you'll need to supply that yourself.
 -		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zztext->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 -		V_DrawMappedPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 -	}
--
++
+ 
  	if (actnum)
  	{
 -		if (!splitscreen)
@@ -180,16 +215,16 @@ graphics - you'll need to supply that yourself.
 -				V_DrawMappedPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
 -		}
 -		V_DrawLevelActNum(ttlnumxpos + ttlscroll, 104, V_PERPLAYER, actnum);
-+		V_DrawLevelActNum(ttlnumxpos, zoney, V_PERPLAYER, actnum);
++        V_DrawLevelActNum(ttlnumxpos, zoney + zoney_frac, V_PERPLAYER, actnum);
  	}
  
 -	V_DrawLevelTitle(lvlttlxpos - ttlscroll, 80, V_PERPLAYER, lvlttl);
-+	V_DrawLevelTitle(lvlttlxpos, lvlttly, V_PERPLAYER, lvlttl);
++    V_DrawLevelTitle(lvlttlxpos, lvlttly + lvlttly_frac, V_PERPLAYER, lvlttl);
  	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
 -		V_DrawLevelTitle(zonexpos + ttlscroll, 104, V_PERPLAYER, M_GetText("Zone"));
 -	V_DrawCenteredString(subttlxpos - ttlscroll, 135, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
-+		V_DrawLevelTitle(zonexpos, zoney, V_PERPLAYER, M_GetText("Zone"));
-+	V_DrawCenteredString(subttlxpos, zoney + 31, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
++        V_DrawLevelTitle(zonexpos, zoney + zoney_frac, V_PERPLAYER, M_GetText("Zone"));
++	V_DrawCenteredString(subttlxpos, zoney + 31 + zoney_frac, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
  
  	lt_lasttic = lt_ticker;
  
